@@ -36,6 +36,3 @@ Prever automaticamente o provável vencedor de um confronto utilizando dados com
 - **scikit-learn** – criação e treinamento do modelo de machine learning
 - **matplotlib** / **seaborn** – visualização de dados (opcional)
 
----
-
-## 📁 Estrutura do Projeto
