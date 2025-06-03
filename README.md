@@ -1,38 +1,55 @@
-# SmashPredictor 🎮🧠  
-Previsão de Resultados para Torneios de Super Smash Bros com IA
+# 🔮 SmashPredictor
+**Sistema de Predição de Resultados para Torneios de Super Smash Bros**
+
+---
 
 ## 📌 Descrição
-**SmashPredictor** é uma aplicação que utiliza algoritmos de Machine Learning para prever o vencedor de uma partida de Super Smash Bros com base em dados históricos. A ideia é integrar inteligência artificial no processo de organização de torneios, oferecendo ao público e aos jogadores uma análise pré-jogo com o “Palpite da IA”.
+O **SmashPredictor** é um sistema que utiliza algoritmos de Machine Learning para prever, com base em dados históricos, quem tem mais chances de vencer uma partida de *Super Smash Bros*. A aplicação possui uma interface interativa via **Streamlit**, onde o usuário pode inserir os dados de dois jogadores e receber o "Palpite da IA", com visualização gráfica das probabilidades.
 
 ---
 
 ## 🎯 Objetivo
-Prever automaticamente o provável vencedor de um confronto utilizando dados como:
-
-- Nome dos jogadores
-- Personagens utilizados
-- Números de vitórias anteriores
-- Fase do confronto
+Facilitar a organização de torneios com análises inteligentes, fornecendo previsões baseadas em dados históricos de confrontos anteriores.
 
 ---
 
 ## 👥 Público-alvo
 - Organizadores de torneios de Smash Bros
-- Comunidades competitivas e casuais do jogo
-- Estudantes e desenvolvedores interessados em aplicações de IA em jogos
+- Jogadores competitivos e casuais
+- Entusiastas de IA aplicada a jogos
+- Alunos em projetos de IA, Jogos e Ciência de Dados
 
 ---
 
 ## 🧠 Algoritmos Utilizados
-- **Random Forest Classifier** (modelo principal)
-- Possível extensão com SVM ou XGBoost
-- Pré-processamento com Label Encoding e One-Hot Encoding
+- `RandomForestClassifier` (da biblioteca `scikit-learn`)
+- `LabelEncoder` para codificação de personagens e fases
+- Lógica de classificação binária (`vencedor_bin`) para treinar o modelo com base em vitórias do jogador 1
 
 ---
 
 ## 🛠️ Tecnologias Usadas
 - **Python 3.10+**
-- **pandas** – manipulação de dados
-- **scikit-learn** – criação e treinamento do modelo de machine learning
-- **matplotlib** / **seaborn** – visualização de dados (opcional)
+- **pandas**
+- **scikit-learn**
+- **streamlit**
+- **matplotlib**
+- **seaborn**
 
+---
+
+## 📁 Estrutura do Projeto
+
+/
+├── src/
+│ ├── data/
+│ │ └── historico.csv <- Arquivo com dados históricos gerados
+│ ├── models/
+│ │ └── predictor.py <- Funções de treino e predição
+│ ├── utils/
+│ │ └── preprocessing.py <- Carregamento e transformação dos dados
+│ ├── app.py <- Interface interativa com Streamlit
+│ └── main.py <- Execução via terminal (modo CLI)
+├── Script gerar dados.py <- Script para gerar partidas fictícias
+├── requirements.txt <- Dependências do projeto
+└── README.md <- Este arquivo
