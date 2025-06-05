@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from models.predictor import carregar_dados, treinar_modelo, prever_resultado
+from models.predictor import carregar_dados, treinar_modelo, prever_resultado, salvar_dados
 from main import selecionar_jogadores_aleatorios
 
 # Configuração da página
@@ -76,39 +76,185 @@ with col1:
         dados['fase_enc'] = le_fase.transform(dados['fase'])
         
         X = dados[['personagem_1_enc', 'personagem_2_enc', 'vitorias_1', 'vitorias_2', 'fase_enc']]
+        
+        # Obter probabilidades e garantir a ordem correta
         proba = modelo.predict_proba(X)[0]
         
+        # Verificar a ordem das classes no modelo
+        if modelo.classes_[0] != 1:  # Se a ordem das classes estiver invertida
+            proba = proba[::-1]  # Inverte as probabilidades
+            
+        # Definir cores baseado no vencedor
+        cores = ['#4CAF50', '#F44336'] if st.session_state['resultado'] == '1' else ['#F44336', '#4CAF50']
+        
         fig, ax = plt.subplots()
-        ax.bar([f'Jogador 1 ({jogador1})', f'Jogador 2 ({jogador2})'], proba, color=['#4CAF50', '#F44336'])
+        bars = ax.bar([f'Jogador 1 ({jogador1})', f'Jogador 2 ({jogador2})'], proba, color=cores)
         ax.set_ylabel('Probabilidade de Vitória')
         ax.set_title('Chances de Vitória')
+        
+        # Adicionar valores exatos nas barras
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.2f}',
+                    ha='center', va='bottom')
+        
         st.pyplot(fig)
 
 with col2:
     st.header("Análise de Dados Históricos")
     
-    # Filtra os dados históricos para os personagens selecionados
     if 'personagem1' in st.session_state and 'personagem2' in st.session_state:
-        personagens_selecionados = [st.session_state['personagem1'], st.session_state['personagem2']]
-        df_filtrado = df[df['personagem_1'].isin(personagens_selecionados) | df['personagem_2'].isin(personagens_selecionados)]
+        # Criar DataFrame separado para cada jogador
+        df_jogador1 = df[df['personagem_1'] == st.session_state['personagem1']].copy()
+        df_jogador1['tipo_jogador'] = 'Jogador 1'
         
-        # Gráfico de distribuição de vitórias por personagem
-        st.subheader("Vitórias por Personagem (Filtrado)")
+        df_jogador2 = df[df['personagem_2'] == st.session_state['personagem2']].copy()
+        df_jogador2['tipo_jogador'] = 'Jogador 2'
+        
+        # Combinar os dados mantendo a distinção
+        df_combined = pd.concat([df_jogador1, df_jogador2])
+        
+        # Ajustar a coluna de vitórias para cada caso
+        df_combined['resultado'] = df_combined.apply(
+            lambda x: x['vencedor_bin'] if x['tipo_jogador'] == 'Jogador 1' else (1 - x['vencedor_bin']),
+            axis=1
+        )
+        
+        # Gráfico de desempenho separado
+        st.subheader("Desempenho Individual por Personagem")
         fig2, ax2 = plt.subplots(figsize=(10, 6))
-        sns.countplot(data=df_filtrado, x='personagem_1', hue='vencedor_bin', ax=ax2)
-        ax2.set_title('Distribuição de Vitórias por Personagem')
-        ax2.legend(['Perdeu', 'Venceu'])
-        st.pyplot(fig2)
         
-        # Gráfico de vitórias por fase (filtrado)
-        if 'fase' in st.session_state:
-            st.subheader(f"Vitórias na Fase: {st.session_state['fase']}")
-            df_fase = df_filtrado[df_filtrado['fase'] == st.session_state['fase']]
-            fig3, ax3 = plt.subplots(figsize=(10, 6))
-            sns.countplot(data=df_fase, x='personagem_1', hue='vencedor_bin', ax=ax3)
-            ax3.set_title(f'Vitórias na Fase {st.session_state["fase"]}')
-            ax3.legend(['Perdeu', 'Venceu'])
-            st.pyplot(fig3)
+        # Plot separado para cada jogador
+        sns.countplot(
+            data=df_combined,
+            x='tipo_jogador',
+            hue='resultado',
+            ax=ax2,
+            order=['Jogador 1', 'Jogador 2'],
+            palette={1: '#4CAF50', 0: '#F44336'}  # 1=Vitórias, 0=Derrotas
+        )
+        
+        ax2.set_title(f'Desempenho de {st.session_state["personagem1"]} (J1) vs {st.session_state["personagem2"]} (J2)')
+        ax2.set_xlabel('Jogador')
+        ax2.set_ylabel('Contagem')
+        ax2.legend(['Derrotas', 'Vitórias'])
+        
+        st.pyplot(fig2)
 
+# Seção de Edição de Dados Históricos
+st.header("📝 Editor de Dados Históricos")
+
+tab1, tab2, tab3 = st.tabs(["Visualizar Dados", "Editar Registros", "Adicionar Novo"])
+
+with tab1:
+    st.subheader("Visualização Completa do Histórico")
+    st.dataframe(df, height=400)
+
+with tab2:
+    st.subheader("Editar Registro Existente")
+    
+    registros = df.to_dict('records')
+    registro_selecionado = st.selectbox(
+        "Selecione um registro para editar:",
+        options=range(len(registros)),
+        format_func=lambda x: f"Jogo {x+1}: {registros[x]['Jogador_1']} vs {registros[x]['Jogador_2']}"
+    )
+    
+    with st.form("editar_form"):
+        registro = registros[registro_selecionado]
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            novo_jogador1 = st.text_input("Jogador 1", registro['Jogador_1'])
+            novo_personagem1 = st.selectbox(
+                "Personagem 1", 
+                le_personagem.classes_,
+                index=list(le_personagem.classes_).index(registro['personagem_1'])
+            )
+            novo_vitorias1 = st.number_input(
+                "Vitórias 1", 
+                min_value=0, 
+                value=registro['vitorias_1']
+            )
+        
+        with col2:
+            novo_jogador2 = st.text_input("Jogador 2", registro['Jogador_2'])
+            novo_personagem2 = st.selectbox(
+                "Personagem 2", 
+                le_personagem.classes_,
+                index=list(le_personagem.classes_).index(registro['personagem_2'])
+            )
+            novo_vitorias2 = st.number_input(
+                "Vitórias 2", 
+                min_value=0, 
+                value=registro['vitorias_2']
+            )
+        
+        nova_fase = st.selectbox(
+            "Fase", 
+            le_fase.classes_,
+            index=list(le_fase.classes_).index(registro['fase'])
+        )
+        
+        novo_vencedor = st.selectbox(
+            "Vencedor", 
+            [1, 2],
+            index=0 if registro.get('vencedor_bin', 1) == 1 else 1
+        )
+        
+        if st.form_submit_button("Salvar Alterações"):
+            # Atualizar o DataFrame
+            df.at[registro_selecionado, 'Jogador_1'] = novo_jogador1
+            df.at[registro_selecionado, 'Jogador_2'] = novo_jogador2
+            df.at[registro_selecionado, 'personagem_1'] = novo_personagem1
+            df.at[registro_selecionado, 'personagem_2'] = novo_personagem2
+            df.at[registro_selecionado, 'vitorias_1'] = novo_vitorias1
+            df.at[registro_selecionado, 'vitorias_2'] = novo_vitorias2
+            df.at[registro_selecionado, 'fase'] = nova_fase
+            df.at[registro_selecionado, 'vencedor_bin'] = novo_vencedor
+            
+            salvar_dados(df)
+            st.success("Registro atualizado com sucesso!")
+            st.experimental_rerun()
+
+with tab3:
+    st.subheader("Adicionar Novo Registro")
+    
+    with st.form("novo_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            novo_jogador1 = st.text_input("Jogador 1", "Nome")
+            novo_personagem1 = st.selectbox("Personagem 1", le_personagem.classes_)
+            novo_vitorias1 = st.number_input("Vitórias 1", min_value=0, value=10)
+        
+        with col2:
+            novo_jogador2 = st.text_input("Jogador 2", "Nome")
+            novo_personagem2 = st.selectbox("Personagem 2", le_personagem.classes_)
+            novo_vitorias2 = st.number_input("Vitórias 2", min_value=0, value=10)
+        
+        nova_fase = st.selectbox("Fase", le_fase.classes_)
+        novo_vencedor = st.selectbox("Vencedor", [1, 2])
+        
+        if st.form_submit_button("Adicionar Registro"):
+            novo_registro = {
+                'Jogador_1': novo_jogador1,
+                'Jogador_2': novo_jogador2,
+                'personagem_1': novo_personagem1,
+                'personagem_2': novo_personagem2,
+                'vitorias_1': novo_vitorias1,
+                'vitorias_2': novo_vitorias2,
+                'fase': nova_fase,
+                'vencedor_bin': novo_vencedor
+            }
+            
+            df = pd.concat([df, pd.DataFrame([novo_registro])], ignore_index=True)
+            salvar_dados(df)
+            st.success("Novo registro adicionado com sucesso!")
+            st.experimental_rerun()
+
+# Rodar com: python -m streamlit run src/app.py
+
+# Rodar com: python -m streamlit run src/app.py
 # Rodar com: python -m streamlit run src/app.py
 # pip install matplotlib pandas scikit-learn streamlit seaborn

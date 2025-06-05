@@ -105,3 +105,14 @@ def selecionar_jogadores_aleatorios(df):
         }
     except Exception as e:
         raise Exception(f"Erro ao selecionar jogo aleatório: {str(e)}")
+    
+
+
+def salvar_dados(df, caminho='dados/dados_historicos.csv'):
+    """Salva o DataFrame de volta no arquivo CSV"""
+    try:
+        df.to_csv(caminho, index=False)
+        return True
+    except Exception as e:
+        print(f"Erro ao salvar dados: {str(e)}")
+        return False
