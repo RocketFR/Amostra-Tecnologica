@@ -14,7 +14,7 @@ df = carregar_dados()
 
 # Treina o modelo uma vez
 modelo, encoders = treinar_modelo(df)
-le_personagem, le_fase = encoders
+le_personagem, le_fase, le_jogador = encoders
 
 # Sidebar para entrada de dados
 with st.sidebar:
@@ -74,10 +74,13 @@ with col1:
         dados['personagem_1_enc'] = le_personagem.transform(dados['personagem_1'])
         dados['personagem_2_enc'] = le_personagem.transform(dados['personagem_2'])
         dados['fase_enc'] = le_fase.transform(dados['fase'])
+        dados['jogador_1_enc'] = le_jogador.transform(dados['Jogador_1'])  # Added player encoding
+        dados['jogador_2_enc'] = le_jogador.transform(dados['Jogador_2'])  # Added player encoding
         
-        X = dados[['personagem_1_enc', 'personagem_2_enc', 'vitorias_1', 'vitorias_2', 'fase_enc']]
+        # Features must match exactly what was used during training
+        X = dados[['jogador_1_enc', 'jogador_2_enc', 'personagem_1_enc', 'personagem_2_enc', 'vitorias_1', 'vitorias_2', 'fase_enc']]
         
-        # Obter probabilidades e garantir a ordem correta
+        # Obter probabilidades
         proba = modelo.predict_proba(X)[0]
         
         # Verificar a ordem das classes no modelo
@@ -252,9 +255,3 @@ with tab3:
             salvar_dados(df)
             st.success("Novo registro adicionado com sucesso!")
             st.experimental_rerun()
-
-# Rodar com: python -m streamlit run src/app.py
-
-# Rodar com: python -m streamlit run src/app.py
-# Rodar com: python -m streamlit run src/app.py
-# pip install matplotlib pandas scikit-learn streamlit seaborn

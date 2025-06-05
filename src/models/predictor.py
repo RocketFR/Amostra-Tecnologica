@@ -27,67 +27,71 @@ def preparar_dados(df):
     try:
         le_personagem = LabelEncoder()
         le_fase = LabelEncoder()
+        le_jogador = LabelEncoder()  # Add this line
         
         # Codifica personagens
         todos_personagens = pd.concat([df['personagem_1'], df['personagem_2']]).unique()
         le_personagem.fit(todos_personagens)
         
+        # Codifica jogadores
+        todos_jogadores = pd.concat([df['Jogador_1'], df['Jogador_2']]).unique()
+        le_jogador.fit(todos_jogadores)  # Add this block
+        
         df['personagem_1_enc'] = le_personagem.transform(df['personagem_1'])
         df['personagem_2_enc'] = le_personagem.transform(df['personagem_2'])
         df['fase_enc'] = le_fase.fit_transform(df['fase'])
+        df['jogador_1_enc'] = le_jogador.transform(df['Jogador_1'])  # Add this line
+        df['jogador_2_enc'] = le_jogador.transform(df['Jogador_2'])  # Add this line
         
-        X = df[['personagem_1_enc', 'personagem_2_enc', 'vitorias_1', 'vitorias_2', 'fase_enc']]
+        X = df[['jogador_1_enc', 'jogador_2_enc', 'personagem_1_enc', 'personagem_2_enc', 'vitorias_1', 'vitorias_2', 'fase_enc']]
         y = df['vencedor_bin']
         
-        return X, y, le_personagem, le_fase
+        return X, y, le_personagem, le_fase, le_jogador  # Return 5 values now
     except Exception as e:
         raise Exception(f"Erro ao preparar dados: {str(e)}")
 
-def treinar_modelo(df=None):  # Adicione o parâmetro com valor padrão None
-    """Treina o modelo de previsão"""
+def treinar_modelo(df=None):
     try:
         if df is None:
             df = carregar_dados()
         
-        X, y, le_personagem, le_fase = preparar_dados(df)
+        X, y, le_personagem, le_fase, le_jogador = preparar_dados(df)  # Recebe o novo encoder
         
         modelo = RandomForestClassifier(
             n_estimators=150,
             max_depth=5,
             random_state=42,
-            min_samples_split=5,
             class_weight='balanced'
         )
         modelo.fit(X, y)
         
-        return modelo, (le_personagem, le_fase)
+        return modelo, (le_personagem, le_fase, le_jogador)  # Inclui le_jogador nos encoders
     except Exception as e:
         raise Exception(f"Erro ao treinar modelo: {str(e)}")
         
 def prever_resultado(modelo, encoders, novo_jogo):
-    """Faz a previsão para um novo jogo"""
     try:
-        le_personagem, le_fase = encoders
+        le_personagem, le_fase, le_jogador = encoders  # Desempacota o novo encoder
         
-        # Verifica campos necessários
-        campos_necessarios = ['personagem_1', 'personagem_2', 'vitorias_1', 'vitorias_2', 'fase']
+        # Verifica campos necessários (incluindo nomes)
+        campos_necessarios = ['Jogador_1', 'Jogador_2', 'personagem_1', 'personagem_2', 'vitorias_1', 'vitorias_2', 'fase']
         if not all(campo in novo_jogo for campo in campos_necessarios):
             raise ValueError("Dados incompletos no novo jogo")
         
-        # Prepara os dados
+        # Prepara os dados (incluindo codificação dos nomes)
         dados = pd.DataFrame([novo_jogo])
         dados['personagem_1_enc'] = le_personagem.transform(dados['personagem_1'])
         dados['personagem_2_enc'] = le_personagem.transform(dados['personagem_2'])
         dados['fase_enc'] = le_fase.transform(dados['fase'])
+        dados['jogador_1_enc'] = le_jogador.transform(dados['Jogador_1'])  # Novo
+        dados['jogador_2_enc'] = le_jogador.transform(dados['Jogador_2'])  # Novo
         
-        X = dados[['personagem_1_enc', 'personagem_2_enc', 'vitorias_1', 'vitorias_2', 'fase_enc']]
+        X = dados[['jogador_1_enc', 'jogador_2_enc', 'personagem_1_enc', 'personagem_2_enc', 'vitorias_1', 'vitorias_2', 'fase_enc']]
         
         predicao = modelo.predict(X)[0]
         return '1' if predicao == 1 else '2'
     except Exception as e:
         raise Exception(f"Erro ao fazer previsão: {str(e)}")
-
-        import random
 
 def selecionar_jogadores_aleatorios(df):
     """Seleciona um jogo aleatório a partir do DataFrame"""
