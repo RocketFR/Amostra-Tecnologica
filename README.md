@@ -26,7 +26,7 @@ Um projeto de machine learning que prevê o vencedor em jogos baseado em histór
 🎮 Como Usar
 Previsão Manual:
 
-Preencha os dados dos jogadores na sidebar[Uploading deepseek_mermaid_20250605_4edefc.mermaid…]()
+Preencha os dados dos jogadores na sidebar
 
 
 Clique em "Prever Vencedor"
