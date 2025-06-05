@@ -40,3 +40,5 @@ O sistema escolhe um jogo do histórico
 Editar Dados:
 
 Na aba "Editor de Dados", adicione ou modifique registros
+
+python -m streamlit run src/app.py
